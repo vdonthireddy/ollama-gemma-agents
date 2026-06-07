@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
-from search_agent import check_for_search_tool_call, build_tool_messages, perform_web_search, TOOLS
+from search_agent import check_and_run_tools, TOOLS
 
 app = FastAPI(title="GemmaJnana Gateway")
 
@@ -42,15 +42,11 @@ def health_check():
 def chat_completion(request: ChatRequest):
     try:
         messages_list = [msg.model_dump() for msg in request.messages]
-        needs_search, search_query = check_for_search_tool_call(messages_list, MODEL_NAME)
-
-        results = []
-        if needs_search and search_query:
-            results = perform_web_search(search_query)
+        tool_messages, _ = check_and_run_tools(messages_list, MODEL_NAME)
 
         modified_messages = list(messages_list)
-        if results:
-            modified_messages.extend(build_tool_messages(search_query, results))
+        if tool_messages:
+            modified_messages.extend(tool_messages)
 
         response = ollama.chat(
             model=MODEL_NAME,
@@ -67,17 +63,16 @@ def chat_stream(request: ChatRequest):
     def event_generator():
         try:
             messages_list = [msg.model_dump() for msg in request.messages]
-            needs_search, search_query = check_for_search_tool_call(messages_list, MODEL_NAME)
+            tool_messages, tool_results = check_and_run_tools(messages_list, MODEL_NAME)
 
-            results = []
-            if needs_search and search_query:
-                yield f"data: {json.dumps({'status': 'searching', 'query': search_query})}\n\n"
-                results = perform_web_search(search_query)
-                yield f"data: {json.dumps({'status': 'results', 'results': results})}\n\n"
+            if "search_web" in tool_results:
+                search_data = tool_results["search_web"]
+                yield f"data: {json.dumps({'status': 'searching', 'query': search_data['query']})}\n\n"
+                yield f"data: {json.dumps({'status': 'results', 'results': search_data['results']})}\n\n"
 
             modified_messages = list(messages_list)
-            if results:
-                modified_messages.extend(build_tool_messages(search_query, results))
+            if tool_messages:
+                modified_messages.extend(tool_messages)
 
             stream = ollama.chat(
                 model=MODEL_NAME,

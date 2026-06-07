@@ -1,5 +1,9 @@
+import os
 import ollama
 from list_tools import TOOLS
+
+# Ensure local connection works reliably on macOS (avoiding IPv6 resolution issues)
+os.environ.setdefault("OLLAMA_HOST", "127.0.0.1")
 
 def perform_web_search(query: str) -> list:
     try:
@@ -18,9 +22,20 @@ def perform_web_search(query: str) -> list:
         print(f"Web search error: {e}")
         return []
 
-def check_for_search_tool_call(messages: list, model_name: str) -> tuple[bool, str]:
+import json
+
+TOOL_REGISTRY = {
+    "search_web": perform_web_search
+}
+
+def check_and_run_tools(messages: list, model_name: str) -> tuple[list[dict], dict[str, any]]:
+    """
+    Checks if the model requests any tool calls. If yes, executes them using the TOOL_REGISTRY,
+    and returns:
+      1. A list of tool messages (assistant tool_calls & tool role responses) to append to the chat history.
+      2. A dictionary of tool execution results mapped by tool name.
+    """
     try:
-        # Call ollama.chat with the message history and tool definition to see if it triggers search
         response = ollama.chat(
             model=model_name,
             messages=messages,
@@ -29,45 +44,58 @@ def check_for_search_tool_call(messages: list, model_name: str) -> tuple[bool, s
         )
         
         tool_calls = getattr(response.message, "tool_calls", None)
-        if tool_calls:
-            for call in tool_calls:
-                if call.function.name == "search_web":
-                    query = call.function.arguments.get("query", "")
-                    return True, query
-        return False, ""
-    except Exception as e:
-        print(f"Error checking search tool call: {e}")
-        return False, ""
-
-def build_tool_messages(search_query: str, results: list) -> list[dict]:
-    """
-    Constructs the assistant tool call message and corresponding tool response message.
-    """
-    if not results:
-        return []
+        if not tool_calls:
+            return [], {}
+            
+        tool_messages = []
+        tool_results = {}
         
-    context = ""
-    for i, r in enumerate(results, 1):
-        context += f"[{i}] Title: {r.get('title')}\nURL: {r.get('href')}\nSnippet: {r.get('body')}\n\n"
-
-    assistant_tool_msg = {
-        "role": "assistant",
-        "content": "",
-        "tool_calls": [
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_web",
-                    "arguments": {"query": search_query}
+        # Build the assistant's decision to call the tools
+        assistant_tool_msg = {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": call.function.name,
+                        "arguments": call.function.arguments
+                    }
+                } for call in tool_calls
+            ]
+        }
+        tool_messages.append(assistant_tool_msg)
+        
+        # Execute each tool call
+        for call in tool_calls:
+            func_name = call.function.name
+            args = call.function.arguments or {}
+            
+            if func_name in TOOL_REGISTRY:
+                func = TOOL_REGISTRY[func_name]
+                result = func(**args)
+                
+                # Format response context
+                if func_name == "search_web":
+                    query = args.get("query", "")
+                    tool_results[func_name] = {"query": query, "results": result}
+                    
+                    context = ""
+                    for i, r in enumerate(result, 1):
+                        context += f"[{i}] Title: {r.get('title')}\nURL: {r.get('href')}\nSnippet: {r.get('body')}\n\n"
+                    content = f"Search Results for '{query}':\n\n{context}"
+                else:
+                    tool_results[func_name] = result
+                    content = json.dumps(result)
+                    
+                tool_response_msg = {
+                    "role": "tool",
+                    "name": func_name,
+                    "content": content
                 }
-            }
-        ]
-    }
-    
-    tool_response_msg = {
-        "role": "tool",
-        "name": "search_web",
-        "content": f"Search Results for '{search_query}':\n\n{context}"
-    }
-    
-    return [assistant_tool_msg, tool_response_msg]
+                tool_messages.append(tool_response_msg)
+                
+        return tool_messages, tool_results
+    except Exception as e:
+        print(f"Error in check_and_run_tools: {e}")
+        return [], {}
