@@ -128,7 +128,7 @@ We provide a simple script that outputs the list of tools defined for the LLM.
 
 Run the script directly:
 ```bash
-python3 inspect_agent_tools.py
+python3 list_tools.py
 ```
 
 ---
