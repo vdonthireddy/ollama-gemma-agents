@@ -531,7 +531,7 @@ This scenario demonstrates the sequential dependency between tools where the cal
 
 #### **Step-by-Step Execution Log (As-Is)**
 
-```text
+```ini
 [app.py:event_generator:84] Received chat stream request. Temperature=0.7
 [app.py:event_generator:86] Message history loaded. Total messages: 1
 [agent.py:check_and_run_tools:29] [LLM Call] Checking if the model requests any tool calls (iteration 1)...
