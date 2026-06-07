@@ -32,7 +32,7 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[Message]
-    temperature: float = 0.7
+    temperature: float = 0.3
     session_name: str = "default_session"
 
 @app.get("/health")
