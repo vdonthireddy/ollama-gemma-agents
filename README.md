@@ -138,6 +138,32 @@ To make it easy to follow the flow of control, here is a step-by-step trace show
 ### Scenario A: Web Search Trigger
 **User Prompt:** `"What is the current price of Bitcoin?"`
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as "Playground UI"
+    participant App as "app.py"
+    participant Agent as "agent.py"
+    participant Ollama as "Ollama Service"
+    participant Search as "tools/search_web.py"
+
+    UI->>App: POST /chat/stream {"messages": [{"role": "user", "content": "What is the current price of Bitcoin?"}]}
+    App->>Agent: check_and_run_tools(...)
+    Agent->>Ollama: [LLM Call] ollama.chat(messages, tools)
+    Ollama-->>Agent: returns tool_calls: [search_web(query='current price of Bitcoin')]
+    Agent->>Search: handler(query='current price of Bitcoin')
+    Search-->>Agent: returns {"query": "...", "results": [...], "content": "..."}
+    Agent->>Ollama: [LLM Call] check tools again (iteration 2)
+    Ollama-->>Agent: returns no more tool_calls
+    Agent-->>App: returns tool_messages, tool_results, llm_calls (2)
+    App->>UI: stream status: searching, query='current price of Bitcoin'
+    App->>UI: stream status: results, results=[...]
+    App->>Ollama: [LLM Call] ollama.chat(stream=True, messages + tool_messages)
+    Ollama-->>App: streams chunks (e.g. "Bitcoin is currently $60,552...")
+    App->>UI: stream event-data chunks
+    App-->>App: Logs Session Summary: Total LLM Calls: 3 | Executed Tool Calls: ['search_web']
+```
+
 #### **Step 1: Frontend Request**
 The user clicks send. The browser client (`index.html`) intercepts the submit and issues an HTTP `POST` to `/chat/stream` with the conversation history.
 *   **Payload sent to `POST /chat/stream`:**
@@ -255,6 +281,30 @@ The dispatcher maps the result to the history sequence:
 ### Scenario B: Calculator Trigger
 **User Prompt:** `"What is 9876 * 5432?"`
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as "Playground UI"
+    participant App as "app.py"
+    participant Agent as "agent.py"
+    participant Ollama as "Ollama Service"
+    participant Calc as "tools/calculator.py"
+
+    UI->>App: POST /chat {"messages": [{"role": "user", "content": "What is 9876 * 5432?"}]}
+    App->>Agent: check_and_run_tools(...)
+    Agent->>Ollama: [LLM Call] ollama.chat(messages, tools)
+    Ollama-->>Agent: returns tool_calls: [calculate(expression='9876 * 5432')]
+    Agent->>Calc: handler(expression='9876 * 5432')
+    Calc-->>Agent: returns {"expression": "...", "result": 53646432}
+    Agent->>Ollama: [LLM Call] check tools again (iteration 2)
+    Ollama-->>Agent: returns no more tool_calls
+    Agent-->>App: returns tool_messages, tool_results, llm_calls (2)
+    App->>Ollama: [LLM Call] ollama.chat(messages + tool_messages)
+    Ollama-->>App: returns final message: "The result of 9876 multiplied by 5432 is 53,646,432."
+    App->>UI: returns HTTP 200 JSON response
+    App-->>App: Logs Session Summary: Total LLM Calls: 3 | Executed Tool Calls: ['calculate']
+```
+
 #### **Step 1: Frontend Request**
 *   **Payload sent to `POST /chat/stream`:**
     ```json
@@ -333,6 +383,44 @@ The dispatcher executes the calculator handler:
 ### Scenario C: Multi-Tool Execution (Search + Calculator)
 **User Prompt:** `"Find the current price of Bitcoin in USD and convert it to Euros (assume 1 USD = 0.92 EUR)."`
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as "Playground UI"
+    participant App as "app.py"
+    participant Agent as "agent.py"
+    participant Ollama as "Ollama Service"
+    participant Search as "tools/search_web.py"
+    participant Calc as "tools/calculator.py"
+
+    UI->>App: POST /chat/stream {"messages": [{"role": "user", "content": "Find BTC price and convert to EUR (assume 1 USD = 0.92 EUR)"}]}
+    App->>Agent: check_and_run_tools(...)
+    
+    Note over Agent,Ollama: Iteration 1
+    Agent->>Ollama: [LLM Call] check tool calls
+    Ollama-->>Agent: returns tool_calls: [search_web(query='current price of Bitcoin in USD')]
+    Agent->>Search: handler(query='current price of Bitcoin in USD')
+    Search-->>Agent: returns {"query": "...", "results": [...], "content": "... $60,000 USD ..."}
+    
+    Note over Agent,Ollama: Iteration 2
+    Agent->>Ollama: [LLM Call] check tool calls (with search context)
+    Ollama-->>Agent: returns tool_calls: [calculate(expression='60000 * 0.92')]
+    Agent->>Calc: handler(expression='60000 * 0.92')
+    Calc-->>Agent: returns {"expression": "...", "result": 55200.0}
+    
+    Note over Agent,Ollama: Iteration 3
+    Agent->>Ollama: [LLM Call] check tool calls (with search + math context)
+    Ollama-->>Agent: returns no more tool_calls
+    
+    Agent-->>App: returns tool_messages, tool_results, llm_calls (3)
+    App->>UI: stream status: searching, query='current price of Bitcoin in USD'
+    App->>UI: stream status: results, results=[...]
+    App->>Ollama: [LLM Call] ollama.chat(stream=True, messages + tool_messages)
+    Ollama-->>App: streams chunks (e.g. "Bitcoin is $60,000 USD, which is 55,200 EUR")
+    App->>UI: stream event-data chunks
+    App-->>App: Logs Session Summary: Total LLM Calls: 4 | Executed Tool Calls: ['search_web', 'calculate']
+```
+
 This represents a multi-turn reasoning trace where the model sequentially uses the output of the first tool to feed the parameters of the second tool.
 
 #### **Step 1: Turn 1 - Triggering Web Search**
@@ -402,6 +490,42 @@ The dispatcher appends the calculator messages to the history. The final prompt 
 
 ### Scenario D: Multi-Step ReAct Trace (Empire State Building feet-to-meters)
 **User Prompt:** `"Search for the height of the Empire State Building in feet, and calculate the height in meters by multiplying the feet by 0.3048."`
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as "Playground UI"
+    participant App as "app.py"
+    participant Agent as "agent.py"
+    participant Ollama as "Ollama Service"
+    participant Search as "tools/search_web.py"
+    participant Calc as "tools/calculator.py"
+
+    UI->>App: POST /chat {"messages": [{"role": "user", "content": "Search height of Empire State Building in feet, and calculate in meters (multiply feet by 0.3048)"}]}
+    App->>Agent: check_and_run_tools(...)
+    
+    Note over Agent,Ollama: Iteration 1
+    Agent->>Ollama: [LLM Call] check tool calls
+    Ollama-->>Agent: returns tool_calls: [search_web(query='height of the Empire State Building in feet')]
+    Agent->>Search: handler(query='height of the Empire State Building in feet')
+    Search-->>Agent: returns {"query": "...", "results": [...], "content": "... total height is 1,454 feet ..."}
+    
+    Note over Agent,Ollama: Iteration 2
+    Agent->>Ollama: [LLM Call] check tool calls (with search context)
+    Ollama-->>Agent: returns tool_calls: [calculate(expression='1454 * 0.3048')]
+    Agent->>Calc: handler(expression='1454 * 0.3048')
+    Calc-->>Agent: returns {"expression": "...", "result": 443.1792}
+    
+    Note over Agent,Ollama: Iteration 3
+    Agent->>Ollama: [LLM Call] check tool calls (with search + math context)
+    Ollama-->>Agent: returns no more tool_calls
+    
+    Agent-->>App: returns tool_messages, tool_results, llm_calls (3)
+    App->>Ollama: [LLM Call] ollama.chat(messages + tool_messages)
+    Ollama-->>App: returns final response: "The height is 1,454 feet, which is 443.18 meters."
+    App->>UI: returns HTTP 200 response
+    App-->>App: Logs Session Summary: Total LLM Calls: 4 | Executed Tool Calls: ['search_web', 'calculate']
+```
 
 This scenario demonstrates the sequential dependency between tools where the calculator (`calculate`) cannot run until the search engine (`search_web`) returns the height value in feet.
 
