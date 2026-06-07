@@ -126,3 +126,204 @@ The FastAPI gateway runs at `http://127.0.0.1:8000` and offers the following end
 *   `GET /health`: Diagnoses connection health and returns active model metadata.
 *   `POST /chat`: Completes message requests (non-streaming).
 *   `POST /chat/stream`: Initiates an SSE (`text/event-stream`) chat channel.
+
+---
+
+## Step-by-Step Code Execution Trace (Debugging Walkthrough)
+
+To make it easy to follow the flow of control, here is a step-by-step trace showing exactly how inputs and outputs travel through the codebase for different scenarios.
+
+---
+
+### Scenario A: Web Search Trigger
+**User Prompt:** `"What is the current price of Bitcoin?"`
+
+#### **Step 1: Frontend Request**
+The user clicks send. The browser client (`index.html`) intercepts the submit and issues an HTTP `POST` to `/chat/stream` with the conversation history.
+*   **Payload sent to `POST /chat/stream`:**
+    ```json
+    {
+      "messages": [
+        {"role": "user", "content": "What is the current price of Bitcoin?"}
+      ],
+      "temperature": 0.7
+    }
+    ```
+
+#### **Step 2: Gateway Entry (`app.py`)**
+The `chat_stream` function in `app.py` receives the payload, converts it to a standard python list of dictionaries, and calls the agent runner:
+*   **Input to `check_and_run_tools()`:**
+    *   `messages_list`: `[{"role": "user", "content": "What is the current price of Bitcoin?"}]`
+    *   `model_name`: `"gemma4:e4b"`
+
+#### **Step 3: Tool Dispatcher Check (`agent.py`)**
+Inside `check_and_run_tools()`, the agent sends the history and active tool definitions (`TOOLS` from `tools/__init__.py`) to Ollama:
+*   **Ollama Chat Call:**
+    ```python
+    response = ollama.chat(
+        model="gemma4:e4b",
+        messages=[{"role": "user", "content": "What is the current price of Bitcoin?"}],
+        tools=TOOLS,
+        options={"temperature": 0.0}
+    )
+    ```
+*   **Ollama Output (Response Metadata):**
+    Because the prompt asks for real-time information ("current price"), the Gemma model outputs a `tool_calls` block:
+    ```json
+    {
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "type": "function",
+            "function": {
+              "name": "search_web",
+              "arguments": {"query": "current price of Bitcoin"}
+            }
+          }
+        ]
+      }
+    }
+    ```
+
+#### **Step 4: Tool Execution (`tools/search_web.py`)**
+The dispatcher identifies `search_web` in the requested tool calls, looks it up in `TOOL_REGISTRY`, and executes its handler:
+*   **Input to `tools/search_web.py:handler()`:**
+    *   `query`: `"current price of Bitcoin"`
+*   **Output from `tools/search_web.py:handler()`:**
+    ```json
+    {
+      "query": "current price of Bitcoin",
+      "results": [
+        {"title": "Bitcoin Price Today...", "href": "https://coinmarketcap.com/...", "body": "...price is $60,552..."}
+      ],
+      "content": "Search Results for 'current price of Bitcoin':\n\n[1] Title: Bitcoin Price Today...\nURL: https://...\nSnippet: ...price is $60,552...\n\n"
+    }
+    ```
+
+#### **Step 5: Message Compilation (`agent.py`)**
+The dispatcher maps the result to the history sequence:
+*   **Output `tool_messages` returned from `check_and_run_tools()`:**
+    ```json
+    [
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "type": "function",
+            "function": {
+              "name": "search_web",
+              "arguments": {"query": "current price of Bitcoin"}
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "name": "search_web",
+        "content": "Search Results for 'current price of Bitcoin':\n\n[1] Title: Bitcoin Price Today...\nURL: https://...\nSnippet: ...price is $60,552...\n\n"
+      }
+    ]
+    ```
+
+#### **Step 6: UI Streams and Final Inference (`app.py` & Ollama)**
+1. `app.py` reads the returned `tool_results` dictionary, detects `"search_web"`, and immediately yields status frames so the client UI displays the search card and source links:
+   ```json
+   data: {"status": "searching", "query": "current price of Bitcoin"}
+   data: {"status": "results", "results": [{"title": "Bitcoin Price Today...", "href": "...", "body": "..."}]}
+   ```
+2. `app.py` appends `tool_messages` to the message history and initiates the final model chat request:
+   *   **Final Chat Request to Ollama:**
+       ```python
+       stream = ollama.chat(
+           model="gemma4:e4b",
+           messages=[
+             {"role": "user", "content": "What is the current price of Bitcoin?"},
+             {"role": "assistant", "content": "", "tool_calls": [...]},
+             {"role": "tool", "name": "search_web", "content": "..."}
+           ],
+           stream=True
+       )
+       ```
+3. Ollama processes the combined prompt containing the user question and the injected search results, generating a final text completion citing `[1]` inline.
+4. `app.py` streams the completed completion chunks back to the user's screen in real-time.
+
+---
+
+### Scenario B: Calculator Trigger
+**User Prompt:** `"What is 9876 * 5432?"`
+
+#### **Step 1: Frontend Request**
+*   **Payload sent to `POST /chat/stream`:**
+    ```json
+    {
+      "messages": [
+        {"role": "user", "content": "What is 9876 * 5432?"}
+      ],
+      "temperature": 0.7
+    }
+    ```
+
+#### **Step 2: Tool Dispatcher Check (`agent.py`)**
+*   **Ollama Chat Call:**
+    ```python
+    response = ollama.chat(
+        model="gemma4:e4b",
+        messages=[{"role": "user", "content": "What is 9876 * 5432?"}],
+        tools=TOOLS,
+        options={"temperature": 0.0}
+    )
+    ```
+*   **Ollama Output (Response Metadata):**
+    Because the prompt is a math expression, Gemma requests the `calculate` tool:
+    ```json
+    {
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "type": "function",
+            "function": {
+              "name": "calculate",
+              "arguments": {"expression": "9876 * 5432"}
+            }
+          }
+        ]
+      }
+    }
+    ```
+
+#### **Step 3: Tool Execution (`tools/calculator.py`)**
+The dispatcher executes the calculator handler:
+*   **Input to `tools/calculator.py:handler()`:**
+    *   `expression`: `"9876 * 5432"`
+*   **Output from `tools/calculator.py:handler()`:**
+    ```json
+    {
+      "expression": "9876 * 5432",
+      "result": 53646432
+    }
+    ```
+
+#### **Step 4: Message Compilation & Final completion (`agent.py` & `app.py`)**
+1. Since the output dictionary from `tools/calculator.py` does not contain a custom `"content"` key, the agent dispatcher serializes the result directly using `json.dumps()`:
+   *   **Compilation:**
+       ```json
+       [
+         {
+           "role": "assistant",
+           "content": "",
+           "tool_calls": [{"type": "function", "function": {"name": "calculate", "arguments": {"expression": "9876 * 5432"}}}]
+         },
+         {
+           "role": "tool",
+           "name": "calculate",
+           "content": "{\"expression\": \"9876 * 5432\", \"result\": 53646432}"
+         }
+       ]
+       ```
+2. `app.py` appends the messages and makes the final completing call to Ollama.
+3. Ollama reads the calculator result and outputs: `"The result of 9876 multiplied by 5432 is 53,646,432."` which streams to the user.
