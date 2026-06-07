@@ -119,18 +119,6 @@ To run this application, make sure you have:
 
 ---
 
-## Utility Tools
-
-### Listing Available Agent Tools
-We provide a simple script that outputs the list of tools defined for the LLM.
-
-Run the script directly:
-```bash
-python3 list_tools.py
-```
-
----
-
 ## API Reference
 
 The FastAPI gateway runs at `http://127.0.0.1:8000` and offers the following endpoints:
