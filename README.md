@@ -397,3 +397,38 @@ The dispatcher appends the calculator messages to the history. The final prompt 
     Ollama synthesizes the final response:
     > "Based on the search results, the current price of Bitcoin is approximately **$60,000 USD**. Converting this value to Euros using the exchange rate of 1 USD = 0.92 EUR (60000 * 0.92) gives **55,200 EUR**."
 *   `app.py` streams the synthesized answer to the browser client in real-time.
+
+---
+
+### Scenario D: Multi-Step ReAct Trace (Empire State Building feet-to-meters)
+**User Prompt:** `"Search for the height of the Empire State Building in feet, and calculate the height in meters by multiplying the feet by 0.3048."`
+
+This scenario demonstrates the sequential dependency between tools where the calculator (`calculate`) cannot run until the search engine (`search_web`) returns the height value in feet.
+
+#### **Step-by-Step Execution Log (As-Is)**
+
+```text
+[2026-06-07 15:42:50.984] [INFO] [app.py:event_generator:84] Received chat stream request. Temperature=0.7
+[2026-06-07 15:42:51.025] [INFO] [app.py:event_generator:86] Message history loaded. Total messages: 1
+[2026-06-07 15:42:51.025] [INFO] [agent.py:check_and_run_tools:29] [LLM Call] Checking if the model requests any tool calls (iteration 1)...
+[2026-06-07 15:43:03.628] [INFO] [agent.py:check_and_run_tools:44] Model requested 1 tool call(s) at iteration 1: ['search_web']
+[2026-06-07 15:43:03.635] [INFO] [agent.py:check_and_run_tools:68] Executing tool 'search_web' with args: {'query': 'height of the Empire State Building in feet'}
+[2026-06-07 15:43:03.635] [INFO] [search_web.py:handler:23] Executing search query: 'height of the Empire State Building in feet'
+[2026-06-07 15:43:04.977] [INFO] [search_web.py:handler:35] Search completed. Found 4 results.
+[2026-06-07 15:43:04.979] [INFO] [agent.py:check_and_run_tools:85] Tool 'search_web' execution completed successfully.
+[2026-06-07 15:43:04.980] [INFO] [agent.py:check_and_run_tools:29] [LLM Call] Checking if the model requests any tool calls (iteration 2)...
+[2026-06-07 15:43:11.089] [INFO] [agent.py:check_and_run_tools:44] Model requested 1 tool call(s) at iteration 2: ['calculate']
+[2026-06-07 15:43:11.092] [INFO] [agent.py:check_and_run_tools:68] Executing tool 'calculate' with args: {'expression': '1454 * 0.3048'}
+[2026-06-07 15:43:11.093] [INFO] [calculator.py:handler:23] Executing calculation: '1454 * 0.3048'
+[2026-06-07 15:43:11.094] [INFO] [calculator.py:handler:32] Calculation result: 443.17920000000004
+[2026-06-07 15:43:11.095] [INFO] [agent.py:check_and_run_tools:85] Tool 'calculate' execution completed successfully.
+[2026-06-07 15:43:11.096] [INFO] [agent.py:check_and_run_tools:29] [LLM Call] Checking if the model requests any tool calls (iteration 3)...
+[2026-06-07 15:43:14.219] [INFO] [agent.py:check_and_run_tools:41] No more tool calls requested by the model at iteration 3.
+[2026-06-07 15:43:14.221] [INFO] [app.py:event_generator:92] Streaming search state: status=searching, query='height of the Empire State Building in feet'
+[2026-06-07 15:43:14.224] [INFO] [app.py:event_generator:94] Streaming search results state.
+[2026-06-07 15:43:14.228] [INFO] [app.py:event_generator:99] Extending history with 4 tool message(s).
+[2026-06-07 15:43:14.229] [INFO] [app.py:event_generator:102] [LLM Call] Calling Ollama chat stream...
+[2026-06-07 15:43:17.132] [INFO] [app.py:event_generator:118] Stream completed successfully. Sent 85 chunk(s).
+[2026-06-07 15:43:17.133] [INFO] [app.py:event_generator:121] Session Summary: Total LLM Calls: 4 | Executed Tool Calls: ['search_web', 'calculate']
+```
+
