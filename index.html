@@ -563,6 +563,7 @@
 
     <script>
         const API_BASE = 'http://127.0.0.1:8435';
+        const sessionName = 'playground_' + Math.random().toString(36).substring(2, 10);
         let chatHistory = [];
 
         function escapeHTML(str) {
@@ -696,7 +697,8 @@
                     },
                     body: JSON.stringify({
                         messages: chatHistory,
-                        temperature: temperature
+                        temperature: temperature,
+                        session_name: sessionName
                     })
                 });
 

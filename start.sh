@@ -121,12 +121,12 @@ if [ -f "app.py" ]; then
     }
     trap cleanup SIGINT SIGTERM EXIT
 
-    # Install Python dependencies if not present (fastapi, uvicorn, ollama, ddgs)
+    # Install Python dependencies if not present (fastapi, uvicorn, ollama, ddgs, python-dotenv)
     echo -e "${YELLOW}Checking python dependencies...${NC}"
-    python3 -c "import fastapi, uvicorn, ollama, ddgs" > /dev/null 2>&1
+    python3 -c "import fastapi, uvicorn, ollama, ddgs, dotenv" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        echo -e "${YELLOW}Installing missing python dependencies (fastapi, uvicorn, ollama, ddgs)...${NC}"
-        python3 -m pip install fastapi uvicorn ollama ddgs
+        echo -e "${YELLOW}Installing missing python dependencies (fastapi, uvicorn, ollama, ddgs, python-dotenv)...${NC}"
+        python3 -m pip install fastapi uvicorn ollama ddgs python-dotenv
     else
         echo -e "${GREEN}Python dependencies are up-to-date.${NC}"
     fi

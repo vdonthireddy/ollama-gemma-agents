@@ -16,8 +16,11 @@ SCHEMA = {
     }
 }
 
-def handler(query: str) -> dict:
+from logger import log_info, log_error
+
+def handler(query: str, session_name: str = "default") -> dict:
     try:
+        log_info(session_name, f"Executing search query: '{query}'")
         from ddgs import DDGS
         with DDGS() as ddgs:
             raw_results = ddgs.text(query, max_results=4)
@@ -28,6 +31,8 @@ def handler(query: str) -> dict:
                     "href": r.get("href", ""),
                     "body": r.get("body", "")
                 })
+            
+            log_info(session_name, f"Search completed. Found {len(results)} results.")
             
             # Format context string for LLM response
             context = ""
@@ -40,7 +45,7 @@ def handler(query: str) -> dict:
                 "content": f"Search Results for '{query}':\n\n{context}"
             }
     except Exception as e:
-        print(f"Web search error: {e}")
+        log_error(session_name, f"Web search error: {e}")
         return {
             "query": query,
             "results": [],
