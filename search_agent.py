@@ -1,32 +1,10 @@
 import os
+import json
 import ollama
-from list_tools import TOOLS
+from tools import TOOLS, TOOL_REGISTRY
 
 # Ensure local connection works reliably on macOS (avoiding IPv6 resolution issues)
 os.environ.setdefault("OLLAMA_HOST", "127.0.0.1")
-
-def perform_web_search(query: str) -> list:
-    try:
-        from ddgs import DDGS
-        with DDGS() as ddgs:
-            raw_results = ddgs.text(query, max_results=4)
-            results = []
-            for r in raw_results:
-                results.append({
-                    "title": r.get("title", ""),
-                    "href": r.get("href", ""),
-                    "body": r.get("body", "")
-                })
-            return results
-    except Exception as e:
-        print(f"Web search error: {e}")
-        return []
-
-import json
-
-TOOL_REGISTRY = {
-    "search_web": perform_web_search
-}
 
 def check_and_run_tools(messages: list, model_name: str) -> tuple[list[dict], dict[str, any]]:
     """
