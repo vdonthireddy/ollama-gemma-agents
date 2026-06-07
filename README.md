@@ -17,9 +17,13 @@ Below is the visual flow of the GemmaJnana local architecture.
 ```mermaid
 graph TD
     Client[Browser UI: index.html] <-->|HTTP/SSE| Backend[FastAPI Gateway: app.py]
-    Backend <-->|Local API Port 11434| Ollama[Ollama Server]
-    Ollama <-->|Local Inference| Model[(Google Gemma 4 Model)]
-    Backend -.->|DuckDuckGo Search| Internet[Internet / Web Search]
+    Backend <-->|Coordinates check_and_run_tools| Agent[Agent Dispatcher: agent.py]
+    Agent <-->|Dynamic Imports| Tools[Tool Registry: tools/]
+    Tools -.->|execute search_web| Internet[Internet / DuckDuckGo]
+    Tools -.->|execute calculate| Math[Safe Eval Math]
+    Agent <-->|Inference queries| Ollama[Ollama Server / Port 11434]
+    Backend <-->|Final Response Stream| Ollama
+    Ollama <-->|Local Model Load| Model[(Google Gemma 4 Model)]
 ```
 
 ### Agentic Search Call Flow Diagram
