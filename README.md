@@ -547,28 +547,28 @@ This scenario demonstrates the sequential dependency between tools where the cal
 
 #### **Step-by-Step Execution Log (As-Is)**
 
-<pre style="background: #0d1117; padding: 16px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; color: #c9d1d9; font-family: monospace; font-size: 13px; line-height: 1.6;">
-<span style="color: #58a6ff;">[app.py:event_generator:84]</span> Received chat stream request. Temperature=0.7
-<span style="color: #58a6ff;">[app.py:event_generator:86]</span> Message history loaded. Total messages: 1
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:29]</span> <span style="color: #ff9800; font-weight: bold;">[LLM Call]</span> Checking if the model requests any tool calls (iteration 1)...
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:44]</span> Model requested 1 tool call(s) at iteration 1: ['search_web']
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:68]</span> Executing tool 'search_web' with args: {'query': 'height of the Empire State Building in feet'}
-<span style="color: #58a6ff;">[search_web.py:handler:23]</span> Executing search query: 'height of the Empire State Building in feet'
-<span style="color: #58a6ff;">[search_web.py:handler:35]</span> Search completed. Found 4 results.
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:85]</span> Tool 'search_web' execution completed successfully.
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:29]</span> <span style="color: #ff9800; font-weight: bold;">[LLM Call]</span> Checking if the model requests any tool calls (iteration 2)...
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:44]</span> Model requested 1 tool call(s) at iteration 2: ['calculate']
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:68]</span> Executing tool 'calculate' with args: {'expression': '1454 * 0.3048'}
-<span style="color: #58a6ff;">[calculator.py:handler:23]</span> Executing calculation: '1454 * 0.3048'
-<span style="color: #58a6ff;">[calculator.py:handler:32]</span> Calculation result: 443.17920000000004
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:85]</span> Tool 'calculate' execution completed successfully.
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:29]</span> <span style="color: #ff9800; font-weight: bold;">[LLM Call]</span> Checking if the model requests any tool calls (iteration 3)...
-<span style="color: #58a6ff;">[agent.py:check_and_run_tools:41]</span> No more tool calls requested by the model at iteration 3.
-<span style="color: #58a6ff;">[app.py:event_generator:92]</span> Streaming search state: status=searching, query='height of the Empire State Building in feet'
-<span style="color: #58a6ff;">[app.py:event_generator:94]</span> Streaming search results state.
-<span style="color: #58a6ff;">[app.py:event_generator:99]</span> Extending history with 4 tool message(s).
-<span style="color: #58a6ff;">[app.py:event_generator:102]</span> <span style="color: #ff9800; font-weight: bold;">[LLM Call]</span> Calling Ollama chat stream...
-<span style="color: #58a6ff;">[app.py:event_generator:118]</span> Stream completed successfully. Sent 85 chunk(s).
-<span style="color: #58a6ff;">[app.py:event_generator:121]</span> Session Summary: Total LLM Calls: 4 | Executed Tool Calls: ['search_web', 'calculate']
-</pre>
+```yaml
+[app.py:event_generator:84]: Received chat stream request. Temperature=0.7
+[app.py:event_generator:86]: Message history loaded. Total messages: 1
+[agent.py:check_and_run_tools:29]: [LLM Call] Checking if the model requests any tool calls (iteration 1)...
+[agent.py:check_and_run_tools:44]: Model requested 1 tool call(s) at iteration 1: ['search_web']
+[agent.py:check_and_run_tools:68]: Executing tool 'search_web' with args: {'query': 'height of the Empire State Building in feet'}
+[search_web.py:handler:23]: Executing search query: 'height of the Empire State Building in feet'
+[search_web.py:handler:35]: Search completed. Found 4 results.
+[agent.py:check_and_run_tools:85]: Tool 'search_web' execution completed successfully.
+[agent.py:check_and_run_tools:29]: [LLM Call] Checking if the model requests any tool calls (iteration 2)...
+[agent.py:check_and_run_tools:44]: Model requested 1 tool call(s) at iteration 2: ['calculate']
+[agent.py:check_and_run_tools:68]: Executing tool 'calculate' with args: {'expression': '1454 * 0.3048'}
+[calculator.py:handler:23]: Executing calculation: '1454 * 0.3048'
+[calculator.py:handler:32]: Calculation result: 443.17920000000004
+[agent.py:check_and_run_tools:85]: Tool 'calculate' execution completed successfully.
+[agent.py:check_and_run_tools:29]: [LLM Call] Checking if the model requests any tool calls (iteration 3)...
+[agent.py:check_and_run_tools:41]: No more tool calls requested by the model at iteration 3.
+[app.py:event_generator:92]: Streaming search state: status=searching, query='height of the Empire State Building in feet'
+[app.py:event_generator:94]: Streaming search results state.
+[app.py:event_generator:99]: Extending history with 4 tool message(s).
+[app.py:event_generator:102]: [LLM Call] Calling Ollama chat stream...
+[app.py:event_generator:118]: Stream completed successfully. Sent 85 chunk(s).
+[app.py:event_generator:121]: Session Summary: Total LLM Calls: 4 | Executed Tool Calls: ['search_web', 'calculate']
+```
 
