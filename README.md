@@ -121,6 +121,18 @@ To run this application, make sure you have:
 
 ---
 
+## Utility Tools
+
+### Inspecting Available Agent Tools
+We provide a utility script to dynamically load any agent module and view the list of tools it makes available to the LLM.
+
+Run the script by passing the path of the agent file:
+```bash
+python3 inspect_agent_tools.py search_agent.py
+```
+
+---
+
 ## API Reference
 
 The FastAPI gateway runs at `http://127.0.0.1:8000` and offers the following endpoints:
