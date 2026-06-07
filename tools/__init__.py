@@ -1,17 +1,12 @@
-import importlib
-import pkgutil
-from pathlib import Path
+from .search_web import SCHEMA as search_web_schema, handler as search_web_handler
+from .calculator import SCHEMA as calculate_schema, handler as calculate_handler
 
-TOOLS = []
-TOOL_REGISTRY = {}
+TOOLS = [
+    search_web_schema,
+    calculate_schema
+]
 
-# Automatically discover and load all tool modules in this folder
-package_dir = str(Path(__file__).parent)
-for _, module_name, _ in pkgutil.iter_modules([package_dir]):
-    module = importlib.import_module(f"tools.{module_name}")
-    
-    # Register the tool if it defines a SCHEMA and a handler
-    if hasattr(module, "SCHEMA") and hasattr(module, "handler"):
-        TOOLS.append(module.SCHEMA)
-        tool_name = module.SCHEMA["function"]["name"]
-        TOOL_REGISTRY[tool_name] = module.handler
+TOOL_REGISTRY = {
+    "search_web": search_web_handler,
+    "calculate": calculate_handler
+}
