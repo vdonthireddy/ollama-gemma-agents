@@ -808,7 +808,9 @@
                 sendBtn.disabled = false;
                 sendBtn.style.opacity = '1';
                 sendBtn.style.cursor = 'pointer';
-                inputEl.focus();
+                setTimeout(() => {
+                    inputEl.focus();
+                }, 50);
                 
                 // Clear blinking dots if they are still present (e.g. no content returned or empty response)
                 if (contentContainer.querySelector('.blinking-dots')) {
@@ -840,6 +842,9 @@
 
         // Adjust height initially
         adjustHeight();
+
+        // Focus user input text box on load
+        userInputEl.focus();
     </script>
 </body>
 
