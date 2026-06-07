@@ -123,12 +123,12 @@ To run this application, make sure you have:
 
 ## Utility Tools
 
-### Inspecting Available Agent Tools
-We provide a utility script to dynamically load any agent module and view the list of tools it makes available to the LLM.
+### Listing Available Agent Tools
+We provide a simple script that outputs the list of tools defined for the LLM.
 
-Run the script by passing the path of the agent file:
+Run the script directly:
 ```bash
-python3 inspect_agent_tools.py search_agent.py
+python3 inspect_agent_tools.py
 ```
 
 ---

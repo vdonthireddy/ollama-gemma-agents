@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-import sys
 import json
-import importlib.util
 
-if len(sys.argv) < 2:
-    print("Usage: python3 inspect_agent_tools.py <agent_path>")
-    sys.exit(1)
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_web",
+            "description": "Search the internet/web for latest information on a given query.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to search the web for."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
 
-# Dynamically load the agent python module
-spec = importlib.util.spec_from_file_location("agent_module", sys.argv[1])
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-
-# Output the defined TOOLS in JSON format
-if hasattr(module, "TOOLS"):
-    print(json.dumps(module.TOOLS, indent=2))
-else:
-    print(f"No 'TOOLS' variable defined in {sys.argv[1]}")
+if __name__ == "__main__":
+    print(json.dumps(TOOLS, indent=2))
