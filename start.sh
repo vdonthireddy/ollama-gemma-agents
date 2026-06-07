@@ -131,7 +131,7 @@ if [ -f "app.py" ]; then
         echo -e "${GREEN}Python dependencies are up-to-date.${NC}"
     fi
 
-    echo -e "\n${YELLOW}Starting FastAPI Gateway Server (port 8000)...${NC}"
+    echo -e "\n${YELLOW}Starting FastAPI Gateway Server (port 8435)...${NC}"
     python3 app.py > /dev/null 2>&1 &
     FASTAPI_PID=$!
     

@@ -562,7 +562,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://127.0.0.1:8000';
+        const API_BASE = 'http://127.0.0.1:8435';
         let chatHistory = [];
 
         function escapeHTML(str) {
@@ -597,7 +597,7 @@
                 }
             } catch (error) {
                 document.getElementById('status-indicator').className = 'status-dot offline';
-                document.getElementById('server-status-text').textContent = 'Cannot connect to Gateway (Port 8000)';
+                document.getElementById('server-status-text').textContent = 'Cannot connect to Gateway (Port 8435)';
             }
         }
 

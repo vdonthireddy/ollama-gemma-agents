@@ -16,7 +16,7 @@ echo -e "${YELLOW}Stopping lightweight HTTP Web Server (port 8080)...${NC}"
 pkill -f "http.server 8080" && echo -e "${GREEN}Web server stopped.${NC}" || echo -e "Web server was not running."
 
 # 2. Stop FastAPI API Gateway
-echo -e "${YELLOW}Stopping FastAPI Gateway (port 8000)...${NC}"
+echo -e "${YELLOW}Stopping FastAPI Gateway (port 8435)...${NC}"
 pkill -f "app.py" && echo -e "${GREEN}FastAPI Gateway stopped.${NC}" || echo -e "FastAPI Gateway was not running."
 
 # 3. Stop Ollama
