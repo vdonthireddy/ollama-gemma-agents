@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GemmaJnana Playground</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     <style>
         :root {
             --bg-color: #080911;
@@ -577,6 +580,20 @@
                 .replace(/'/g, '&#039;');
         }
 
+        function renderMath(element) {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(element, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+
         // Check health of FastAPI gateway and Ollama
         async function checkConnection() {
             try {
@@ -788,6 +805,7 @@
                                     }
                                     fullResponse += payload.content;
                                     contentContainer.innerHTML = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
+                                    renderMath(contentContainer);
                                     document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
                                 }
                             } catch (e) {
@@ -816,6 +834,7 @@
                 if (contentContainer.querySelector('.blinking-dots')) {
                     contentContainer.innerHTML = fullResponse || '<em>No response content.</em>';
                 }
+                renderMath(contentContainer);
             }
         }
 
