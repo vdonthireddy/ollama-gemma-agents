@@ -1,6 +1,6 @@
 # GemmaJnana
 
-![GemmaJnana Banner](./images/linkedin_banner_v3.png)
+![GemmaJnana Banner](./images/linkedin_banner_v4.png)
 
 A local development stack to download, serve, and interact with Google's **Gemma 4 (Effective 4B)** model using **Ollama** and a **FastAPI** gateway. The package comes with a beautiful, fully animated chat playground UI.
 
@@ -16,14 +16,22 @@ Below is the visual flow of the GemmaJnana local architecture.
 
 ```mermaid
 graph TD
-    Client[Browser UI: index.html] <-->|HTTP/SSE| Backend[FastAPI Gateway: app.py]
-    Backend <-->|Coordinates check_and_run_tools| Agent[Agent Dispatcher: agent.py]
-    Agent <-->|Dynamic Imports| Tools[Tool Registry: tools/]
-    Tools -.->|execute search_web| Internet[Internet / DuckDuckGo]
-    Tools -.->|execute calculate| Math[Safe Eval Math]
-    Agent <-->|Inference queries| Ollama[Ollama Server / Port 11434]
-    Backend <-->|Final Response Stream| Ollama
-    Ollama <-->|Local Model Load| Model[(Google Gemma 4 Model)]
+    Client[Browser UI: index.html / Port 8080] -->|1. POST Request| Backend[FastAPI Gateway: app.py / Port 8435]
+    Backend -->|2. Invoke check_and_run_tools| Agent[Agent Dispatcher: agent.py]
+    Agent -->|3. Tool-calling Query| Ollama[Ollama Server / Port 11434]
+    Ollama -->|4. Requested Tool Calls| Agent
+    Agent -->|5. Execute Tool Handlers| Tools[Tool Registry: tools/]
+    Tools -->|Search Web| DDG[Internet / DuckDuckGo]
+    Tools -->|Evaluate Math| Math[Safe Eval Math]
+    DDG -->|Search Results| Tools
+    Math -->|Numeric Result| Tools
+    Tools -->|Tool Output| Agent
+    Agent -->|6. Return Tool Messages & Results| Backend
+    Backend -->|7. Stream Search Status Cards| Client
+    Backend -->|8. Final Inference Query| Ollama
+    Ollama -->|9. Response Stream| Backend
+    Backend -->|10. Stream SSE Chat Chunks| Client
+    Ollama -.->|Load Model| Model[(Google Gemma 4 Model: gemma4:e4b)]
 ```
 
 ### Agentic Search Call Flow Diagram
@@ -35,22 +43,26 @@ sequenceDiagram
     participant App as "app.py"
     participant Agent as "agent.py"
     participant Ollama as "Ollama Service"
-    participant Web as "Internet Search"
+    participant Tools as "Tool Modules"
 
     Client->>App: POST /chat/stream with history
-    App->>Agent: check_and_run_tools
-    Agent->>Ollama: ollama.chat with TOOLS schema
-    Ollama-->>Agent: Returns tool_calls if search needed
+    App->>Agent: check_and_run_tools(messages, model)
     
-    alt Search Needed
-        Agent->>Web: Query web search
-        Web-->>Agent: Returns snippets and links
+    loop ReAct Multi-Step Loop (up to 5 turns)
+        Agent->>Ollama: [LLM Call] ollama.chat with history + tool context
+        Ollama-->>Agent: Returns tool_calls (or empty if finished)
+        break If no more tool calls
+            Note over Agent: Exit Loop
+        end
+        Agent->>Tools: Execute matching handlers (search_web / calculate)
+        Tools-->>Agent: Returns tool results
+        Note over Agent: Append tool results to message context
     end
     
-    Agent-->>App: Returns tool messages & execution results
-    App->>Ollama: ollama.chat with history and tools
-    Ollama-->>App: Stream final cited response
-    App-->>Client: Stream content and citations
+    Agent-->>App: Returns aggregated tool messages, results, and LLM call counts
+    App->>Ollama: [LLM Call] Stream final chat response (with complete tool context)
+    Ollama-->>App: Stream response chunks
+    App-->>Client: Stream SSE content (with citational source states)
 ```
 
 ### Components Description
