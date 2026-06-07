@@ -327,3 +327,73 @@ The dispatcher executes the calculator handler:
        ```
 2. `app.py` appends the messages and makes the final completing call to Ollama.
 3. Ollama reads the calculator result and outputs: `"The result of 9876 multiplied by 5432 is 53,646,432."` which streams to the user.
+
+---
+
+### Scenario C: Multi-Tool Execution (Search + Calculator)
+**User Prompt:** `"Find the current price of Bitcoin in USD and convert it to Euros (assume 1 USD = 0.92 EUR)."`
+
+This represents a multi-turn reasoning trace where the model sequentially uses the output of the first tool to feed the parameters of the second tool.
+
+#### **Step 1: Turn 1 - Triggering Web Search**
+The model sees the prompt and realizes it does not know the current price of Bitcoin.
+*   **Ollama Chat Call:**
+    ```python
+    response = ollama.chat(
+        model="gemma4:e4b",
+        messages=[{"role": "user", "content": "Find the current price of Bitcoin in USD and convert it to Euros (assume 1 USD = 0.92 EUR)."}],
+        tools=TOOLS
+    )
+    ```
+*   **Dispatcher (`agent.py`) executes `search_web`:**
+    *   **Input to `tools/search_web.py:handler()`:** `query = "current price of Bitcoin in USD"`
+    *   **Output from `tools/search_web.py:handler()`:**
+        ```json
+        {
+          "query": "current price of Bitcoin in USD",
+          "results": [{"title": "Bitcoin Price today...", "href": "...", "body": "...price is $60,000 USD..."}],
+          "content": "Search Results for 'current price of Bitcoin in USD':\n\n[1] Title: ... price is $60,000 USD ..."
+        }
+        ```
+
+#### **Step 2: Turn 2 - Triggering Calculator**
+The conversation history now contains:
+1. User prompt
+2. Assistant tool call (`search_web`)
+3. Tool response (`$60,000 USD`)
+
+The model reads this history. It has found the price ($60,000) and now needs to execute the conversion logic requested by the user ($60,000 * 0.92). It triggers a second tool call:
+*   **Ollama Chat Call (Next Turn):**
+    ```python
+    response = ollama.chat(
+        model="gemma4:e4b",
+        messages=[
+            {"role": "user", "content": "Find the current price of Bitcoin in USD and convert it to Euros (assume 1 USD = 0.92 EUR)."},
+            {"role": "assistant", "content": "", "tool_calls": [{"type": "function", "function": {"name": "search_web", "arguments": {"query": "current price of Bitcoin in USD"}}}]},
+            {"role": "tool", "name": "search_web", "content": "Search Results for 'current price of Bitcoin in USD':\n\n[1] Title: ... price is $60,000 USD ..."}
+        ],
+        tools=TOOLS
+    )
+    ```
+*   **Dispatcher (`agent.py`) executes `calculate`:**
+    *   **Input to `tools/calculator.py:handler()`:** `expression = "60000 * 0.92"`
+    *   **Output from `tools/calculator.py:handler()`:**
+        ```json
+        {
+          "expression": "60000 * 0.92",
+          "result": 55200.0
+        }
+        ```
+
+#### **Step 3: Final Inference Synthesis**
+The dispatcher appends the calculator messages to the history. The final prompt context contains both the search results and the arithmetic output:
+1. User prompt
+2. Assistant `search_web` call
+3. Tool `search_web` response (`$60,000`)
+4. Assistant `calculate` call
+5. Tool `calculate` response (`55200.0`)
+
+*   **Final Ollama Chat Call:**
+    Ollama synthesizes the final response:
+    > "Based on the search results, the current price of Bitcoin is approximately **$60,000 USD**. Converting this value to Euros using the exchange rate of 1 USD = 0.92 EUR (60000 * 0.92) gives **55,200 EUR**."
+*   `app.py` streams the synthesized answer to the browser client in real-time.
