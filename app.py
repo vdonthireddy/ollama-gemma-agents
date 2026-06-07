@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
-from search_agent import check_and_run_tools, TOOLS
+from agent import check_and_run_tools, TOOLS
 
 app = FastAPI(title="GemmaJnana Gateway")
 

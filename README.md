@@ -29,24 +29,21 @@ sequenceDiagram
     autonumber
     participant Client as "Browser Client"
     participant App as "app.py"
-    participant Agent as "search_agent.py"
+    participant Agent as "agent.py"
     participant Ollama as "Ollama Service"
     participant Web as "Internet Search"
 
     Client->>App: POST /chat/stream with history
-    App->>Agent: check_for_search_tool_call
+    App->>Agent: check_and_run_tools
     Agent->>Ollama: ollama.chat with TOOLS schema
     Ollama-->>Agent: Returns tool_calls if search needed
     
     alt Search Needed
-        App->>Agent: perform_web_search
         Agent->>Web: Query web search
         Web-->>Agent: Returns snippets and links
-        App->>Agent: build_tool_messages
-        Agent-->>App: Returns assistant and tool messages
-        App->>App: Append tool messages to history
     end
     
+    Agent-->>App: Returns tool messages & execution results
     App->>Ollama: ollama.chat with history and tools
     Ollama-->>App: Stream final cited response
     App-->>Client: Stream content and citations
@@ -63,6 +60,7 @@ sequenceDiagram
     6. Serves the web interface in the foreground.
 *   **`stop.sh`**: Gracefully terminates all background servers (Ollama, FastAPI app, and the lightweight HTTP server).
 *   **`app.py`**: A single-file FastAPI gateway extended to support search classification (agentic routing), DuckDuckGo search execution, and search-context injection into the conversation history. It exposes health checks (`/health`), text completions (`/chat`), and SSE-based chunk streaming (`/chat/stream`).
+*   **`agent.py`**: A general agent runner containing the unified `check_and_run_tools` loop, which dynamically dispatches LLM tool calls via the registry and compiles the tool history sequence.
 *   **`index.html`**: A premium dark-themed web playground featuring custom typography, responsive design, a bottom-anchored text input with search settings selector (Auto, Always, Off), dynamic searching status cards, and clickable source citation chips.
 
 ---

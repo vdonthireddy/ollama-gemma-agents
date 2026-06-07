@@ -52,18 +52,12 @@ def check_and_run_tools(messages: list, model_name: str) -> tuple[list[dict], di
             if func_name in TOOL_REGISTRY:
                 func = TOOL_REGISTRY[func_name]
                 result = func(**args)
+                tool_results[func_name] = result
                 
-                # Format response context
-                if func_name == "search_web":
-                    query = args.get("query", "")
-                    tool_results[func_name] = {"query": query, "results": result}
-                    
-                    context = ""
-                    for i, r in enumerate(result, 1):
-                        context += f"[{i}] Title: {r.get('title')}\nURL: {r.get('href')}\nSnippet: {r.get('body')}\n\n"
-                    content = f"Search Results for '{query}':\n\n{context}"
+                # Extract pre-formatted context if returned by the tool module, else serialize
+                if isinstance(result, dict) and "content" in result:
+                    content = result["content"]
                 else:
-                    tool_results[func_name] = result
                     content = json.dumps(result)
                     
                 tool_response_msg = {

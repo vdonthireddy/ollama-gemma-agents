@@ -16,7 +16,7 @@ SCHEMA = {
     }
 }
 
-def handler(query: str) -> list:
+def handler(query: str) -> dict:
     try:
         from ddgs import DDGS
         with DDGS() as ddgs:
@@ -28,7 +28,21 @@ def handler(query: str) -> list:
                     "href": r.get("href", ""),
                     "body": r.get("body", "")
                 })
-            return results
+            
+            # Format context string for LLM response
+            context = ""
+            for i, r in enumerate(results, 1):
+                context += f"[{i}] Title: {r['title']}\nURL: {r['href']}\nSnippet: {r['body']}\n\n"
+                
+            return {
+                "query": query,
+                "results": results,
+                "content": f"Search Results for '{query}':\n\n{context}"
+            }
     except Exception as e:
         print(f"Web search error: {e}")
-        return []
+        return {
+            "query": query,
+            "results": [],
+            "content": f"Web search failed: {e}"
+        }
