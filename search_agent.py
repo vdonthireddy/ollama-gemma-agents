@@ -1,24 +1,5 @@
 import ollama
-
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_web",
-            "description": "Search the internet/web for latest information on a given query.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to search the web for."
-                    }
-                },
-                "required": ["query"]
-            }
-        }
-    }
-]
+from list_tools import TOOLS
 
 def perform_web_search(query: str) -> list:
     try:
