@@ -565,6 +565,7 @@
         const API_BASE = 'http://127.0.0.1:8435';
         const sessionName = 'playground_' + Math.random().toString(36).substring(2, 10);
         let chatHistory = [];
+        let isGenerating = false;
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -662,7 +663,9 @@
         }
 
         async function handleSend() {
+            if (isGenerating) return;
             const inputEl = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-button');
             const prompt = inputEl.value.trim();
             if (!prompt) return;
 
@@ -673,7 +676,7 @@
             if (prompt.startsWith('/')) {
                 if (handleSlashCommand(prompt)) {
                     return;
-                  }
+                }
             }
 
             // Append User Message
@@ -690,6 +693,11 @@
             contentContainer.innerHTML = '<span class="blinking-dots">...</span>';
 
             try {
+                isGenerating = true;
+                inputEl.disabled = true;
+                sendBtn.disabled = true;
+                sendBtn.style.opacity = '0.5';
+                sendBtn.style.cursor = 'not-allowed';
                 const response = await fetch(`${API_BASE}/chat/stream`, {
                     method: 'POST',
                     headers: {
@@ -794,6 +802,18 @@
             } catch (error) {
                 contentContainer.textContent = `Connection error: ${error.message}`;
                 contentContainer.style.color = '#ff5252';
+            } finally {
+                isGenerating = false;
+                inputEl.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = '1';
+                sendBtn.style.cursor = 'pointer';
+                inputEl.focus();
+                
+                // Clear blinking dots if they are still present (e.g. no content returned or empty response)
+                if (contentContainer.querySelector('.blinking-dots')) {
+                    contentContainer.innerHTML = fullResponse || '<em>No response content.</em>';
+                }
             }
         }
 
