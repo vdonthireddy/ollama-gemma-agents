@@ -188,7 +188,7 @@ The user clicks send. The browser client (`index.html`) intercepts the submit an
       "messages": [
         {"role": "user", "content": "What is the current price of Bitcoin?"}
       ],
-      "temperature": 0.7
+      "temperature": 0.3
     }
     ```
 
@@ -328,7 +328,7 @@ sequenceDiagram
       "messages": [
         {"role": "user", "content": "What is 9876 * 5432?"}
       ],
-      "temperature": 0.7
+      "temperature": 0.3
     }
     ```
 
@@ -548,7 +548,7 @@ This scenario demonstrates the sequential dependency between tools where the cal
 #### **Step-by-Step Execution Log (As-Is)**
 
 ```diff
-  [app.py:event_generator:84] Received chat stream request. Temperature=0.7
+  [app.py:event_generator:84] Received chat stream request. Temperature=0.3
   [app.py:event_generator:86] Message history loaded. Total messages: 1
 + [agent.py:check_and_run_tools:29] [LLM Call] Checking if the model requests any tool calls (iteration 1)...
   [agent.py:check_and_run_tools:44] Model requested 1 tool call(s) at iteration 1: ['search_web']
