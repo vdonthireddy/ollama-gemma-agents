@@ -36,7 +36,8 @@ venv.bak/
 
 # Logs and databases
 *.log
-logs/
+logs/*
+!logs/.gitkeep
 *.sqlite
 
 # macOS system files
